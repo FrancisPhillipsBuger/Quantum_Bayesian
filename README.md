@@ -1,12 +1,16 @@
 <p align="center">
-    <h2 align="center">QBM: A Quantum Bayesian Machine for Relaxed Energy Prediction on Metal-Oxide Catalysts</h2>
+    <h2 align="center">QBM: A Quantum Bayesian Machine for<br>
+    Relaxed Energy Prediction on Metal-Oxide Catalysts</h2>
 </p>
+
+<p align="center">
+    <a href="https://francisphillipsbuger.github.io/"><strong> Chien-Chai (Francis) Chang</strong></a>
+</p> 
 
 <p align="center">
 <img src="https://img.shields.io/badge/Linux-FCC624?logo=linux&logoColor=black" alt="Linux">
 <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12">
 <img src="https://img.shields.io/badge/Qiskit-2.4-6929C4?logo=qiskit&logoColor=white" alt="Qiskit 2.4">
-<img src="https://img.shields.io/badge/PyTorch%20Geometric-2.7-3C2179?logo=pyg&logoColor=white" alt="PyTorch Geometric 2.7">
 </p>
 
 ## What is QBM?
@@ -14,7 +18,7 @@ QBM is a Python-based Bayesian model-selection framework, with classical and qua
 
 $$\mathrm{mBIC} = \ln\frac{\sigma^2}{\sigma_0^2} + \frac{k\ln n}{n} + \frac{2\gamma}{n}\,k\ln\frac{p}{k},$$
 
-where $k$ is the subset size, $p$ the number of candidate components and $n$ the number of training samples. The top-$k$ subset models are averaged (Tier 1), and a residual learner corrects what they miss.
+where $k$ is the subset size, $p$ the number of candidate components and $n$ the number of training samples. The top-$k$ subset models are averaged into an ensemble, and a residual learner corrects what they miss.
 QBM is specifically designed to compare classical and quantum machine learning on the same materials-science regression task: the subset search and the kernels can run on a classical computer or on a simulated gate-model quantum computer.
 
 ## Why QBM?
@@ -24,7 +28,7 @@ Graph neural networks predict catalyst energies by training one large model end 
 QBM is specifically designed to overcome these limitations by reducing the problem to a compact, physically motivated feature space in which classical and quantum learners can be compared directly.
 - `Pseudospin descriptor` with atom-level Nyström pooling encodes multi-element surfaces in a fixed-length vector, and is cached on disk so later runs skip the most expensive step.
 - `mBIC subset selection` finds the most informative descriptor subsets, either by exhaustive enumeration or as a QUBO solved by QAOA.
-- `Two-tier prediction` combines Bayesian model averaging over the top-$k$ subset models with a residual learner (exact GP, Nyström + Bayesian ridge, linear ridge, or a quantum model).
+- `Ensemble + residual prediction` combines Bayesian model averaging over the top-$k$ subset models with a residual learner (exact GP, Nyström + Bayesian ridge, linear ridge, or a quantum model).
 - `Quantum kernels` replace the classical kernels with a fidelity quantum kernel (ZZ feature map) or a variational data re-uploading circuit. All circuits run on classical statevector simulators, so no quantum hardware is needed.
 
 ## Requirements
@@ -66,6 +70,64 @@ Alternatively, install the environment using the provided .txt and .YAML files a
 
 PyTorch is only used for data loading and runs on CPU. If you need a specific CUDA build, install it first by following the [PyTorch instructions](https://pytorch.org/get-started/locally/).
 
+### Repository layout
+
+```
+.
+├── main_train.py                         # Single entry point: `python -m main_train train --variant ...`
+├── config_file/                          # One self-contained YAML per variant
+│   ├── model_selection.yaml              #   baseline
+│   ├── model_selection_quantum.yaml      #   quantum
+│   ├── model_selection_quantum_kernel.yaml     # quantum_kernel
+│   └── model_selection_quantum_reupload.yaml   # reupload
+├── bayesian_framework/
+│   ├── descriptors/                      # Pseudospin RDF / ADF / TDF descriptor
+│   │   ├── feature_extractor.py          #   per-atom descriptor, dimension 2 * (rdf + adf + tdf)
+│   │   ├── numba_kernels.py              #   Numba-compiled inner loops
+│   │   └── atomic_pooling.py             #   atom-level Nyström RBF map with per-structure sum pooling
+│   ├── selectors/                        # mBIC subset search
+│   │   ├── baseline.py                   #   exhaustive enumeration
+│   │   ├── quantum.py                    #   QUBO solved by QAOA, then exact refit and mBIC rescoring
+│   │   ├── quantum_kernel.py             #   QAOA search with fidelity quantum-kernel ridge subsets
+│   │   └── quantum_reuploading.py        #   QAOA search with two-stage (kernel proxy, then circuit) scoring
+│   ├── predictors/                       # ensemble averaging and residual learning
+│   │   ├── composition_baseline.py       #   RidgeCV on per-element atom counts, removed before training
+│   │   ├── bayesian_averaging.py         #   Bayesian model averaging over the top-k subset models
+│   │   ├── residual_learning.py          #   classical residual: exact GP, Nyström + BayesianRidge, or ridge
+│   │   ├── quantum_residual_learning.py  #   residual GP with a fidelity quantum kernel
+│   │   └── quantum_reuploading_residual.py     # residual learner with a variational re-uploading circuit
+│   └── frameworks/                       # Variant assembly: descriptor -> pooling -> selection -> ensemble -> residual
+│       ├── base.py                       #   classical BayesianFramework
+│       ├── quantum.py                    #   QAOA subset selection
+│       ├── quantum_kernel.py             #   quantum-kernel ensemble (and optional residual GP)
+│       └── quantum_reuploading.py        #   re-uploading selector and predictors
+├── common/                               # Shared numerics and utilities
+│   ├── kernel_ridge.py                   #   RBF / Nyström KRR primitives and the GCV ridge path
+│   ├── reducers.py                       #   supervised PLS reducer with a PCA-like interface
+│   ├── quantum_kernel.py                 #   fidelity kernel K(x, y) = |<phi(x)|phi(y)>|^2 (ZZ / Z feature map)
+│   ├── quantum_kernel_ridge.py           #   KRR on the fidelity kernel
+│   ├── quantum_reuploading.py            #   variational data re-uploading regressor
+│   ├── quantum_reuploading_kernel.py     #   fidelity kernel of the re-uploading encoding at frozen parameters
+│   ├── quantum_reuploading_regression.py #   re-uploading regressor behind the KRR `fit` interface
+│   ├── config_loader.py                  #   YAML loading
+│   ├── arrays.py                         #   array-conversion helpers
+│   └── report.py                         #   tag-prefixed log lines and throttled progress bars
+├── data/
+│   ├── lmdb_dataset.py                   # Lazy reader for the OC22 IS2RE-Total LMDB shards
+│   └── feature_cache.py                  # On-disk `.feature_cache/` for per-atom descriptors
+├── training/
+│   ├── variants.py                       # Variant registry: `--variant` -> config file and checkpoint name
+│   ├── loaders.py                        # PyG DataLoader factory for the three splits
+│   ├── pipeline.py                       # Train, evaluate and report one variant end to end
+│   └── evaluation.py                     # Descriptor extraction over a loader and the metric table
+├── environment/                          # requirements.txt and environment.yaml
+├── run_train.sh                          # Experiment 1: one variant over adsorbed, clean and is2re-total
+├── run_train_all_variants.sh             # Experiment 2: every variant on is2re-total
+├── run_common.sh                         # Shared setup sourced by both scripts
+└── dataset/                              # OC22 LMDB files (not tracked; see Dataset and Experiment)
+```
+
+
 ### Dataset and Experiment
 QBM reads the OC22 **IS2RE-Total** LMDB files, which store PyTorch Geometric `Data` objects with the initial positions, cell, tags and the relaxed DFT energy `y_relaxed`. Download `is2res_total_train_val_test_lmdbs.tar.gz` from the [OC22 dataset page](https://fair-chem.github.io/catalysts/datasets/oc22.html) and extract it into `dataset/`.
 
@@ -102,7 +164,7 @@ python -m main_train train --variant <variant> --base_dir <dataset_split_folder>
 | `--result_dir` | Output folder (overrides the config)                                            |
 
 #### 01 Baseline
-`baseline` is the classical reference. It exhaustively enumerates every descriptor subset, fits an RBF kernel ridge model on each and scores it by mBIC. Tier 2 uses a classical GP or ridge residual learner. Configured by `model_selection.yaml`.
+`baseline` is the classical reference. It exhaustively enumerates every descriptor subset, fits an RBF kernel ridge model on each and scores it by mBIC. The residual stage uses a classical GP or ridge learner. Configured by `model_selection.yaml`.
 
 ```
 python -m main_train train --variant baseline --base_dir <dataset_split_folder> --result_dir <output_folder>
@@ -116,14 +178,14 @@ python -m main_train train --variant quantum --base_dir <dataset_split_folder> -
 ```
 
 #### 03 Quantum kernel
-`quantum_kernel` uses the QAOA subset search and replaces the Tier-1 kernel with a fidelity quantum kernel built from a ZZ feature map. The Tier-2 GP can optionally use the same quantum kernel. Configured by `model_selection_quantum_kernel.yaml`.
+`quantum_kernel` uses the QAOA subset search and replaces the ensemble kernel with a fidelity quantum kernel built from a ZZ feature map. The residual GP can optionally use the same quantum kernel. Configured by `model_selection_quantum_kernel.yaml`.
 
 ```
 python -m main_train train --variant quantum_kernel --base_dir <dataset_split_folder> --result_dir <output_folder>
 ```
 
 #### 04 Data re-uploading
-`reupload` uses the QAOA subset search with two-stage rescoring, a variational data re-uploading circuit as the Tier-1 model, and a data re-uploading regressor with Laplace uncertainty as the Tier-2 residual learner. Configured by `model_selection_quantum_reupload.yaml`.
+`reupload` uses the QAOA subset search with two-stage rescoring, a variational data re-uploading circuit as the ensemble model, and a data re-uploading regressor with Laplace uncertainty as the residual learner. Configured by `model_selection_quantum_reupload.yaml`.
 
 ```
 python -m main_train train --variant reupload --base_dir <dataset_split_folder> --result_dir <output_folder>
@@ -155,12 +217,12 @@ The most important settings in the YAML files are:
 | `framework`                      | `n_jobs`                                             | Number of parallel workers (set this to your CPU core count) |
 |                                  | `atom_nystroem_components`                           | Rank of the atom-level Nyström map                           |
 | `framework.training`             | `reduction`, `pca_components`                        | Reduction method (`pls`) and number of components or qubits  |
-| `framework.prediction`           | `top_k`, `tier1_weighting`                           | Tier-1 ensemble size and weighting (`stacking` or `bic`)     |
+| `framework.prediction`           | `top_k`, `ensemble_weighting`                        | Ensemble size and weighting (`stacking` or `bic`)            |
 | `selection`                      | `gamma`, `alpha_grid`                                | mBIC sparsity penalty and ridge regularisation grid          |
 | `selection.qubo` / `.quantum`    | `cardinality_penalty`, `qaoa_reps`, `qaoa_maxiter`   | QUBO formulation and QAOA depth and optimiser budget         |
 | `selection.quantum_kernel`       | `feature_map`, `n_qubits`, `n_layers`, `scale`       | Fidelity-kernel feature map                                  |
 | `selection.reuploading`          | `n_qubits`, `n_layers`, `epochs`, `residual_backend` | Re-uploading circuit and training settings                   |
-| `residual_learning`              | `kernel_type`, `sigma_noise`                         | Tier-2 kernel (`linear`, `rbf` or `matern`) and noise level  |
+| `residual_learning`              | `kernel_type`, `sigma_noise`                         | Residual kernel (`linear`, `rbf` or `matern`) and noise level |
 
 
 ### Execution for full work flow
