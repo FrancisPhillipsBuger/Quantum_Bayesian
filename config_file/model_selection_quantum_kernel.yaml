@@ -1,0 +1,85 @@
+# Variant: quantum_kernel (QAOA search + fidelity quantum-kernel KRR).
+# Self-contained; no other config file is read.
+# pca_components IS the QAOA qubit count (statevector needs 2^p) — keep it small.
+
+data:
+  paths:
+    base_dir: "dataset/is2res_by_adsorbate/adsorbed"   # relative to the repository root
+    train_split: "train"
+    val_id_split: "val_id"
+    val_ood_split: "val_ood"
+  loader:
+    batch_size: 128
+    num_workers: 4
+    persistent_workers: true
+    prefetch_factor: 4
+  feature_cache: true
+  result_dir: "Result/adsorbed"
+
+feature_extractor:
+  rdf_n_basis: 11
+  adf_n_basis: 11
+  tdf_n_basis: 11
+  cutoff_radius: 6.0
+  species: null
+
+framework:
+  n_jobs: 36
+  use_composition_baseline: true
+  composition_baseline_alphas: null
+  atom_nystroem_components: 1024
+  pooling_ads_decay_length: 3
+  prediction:
+    use_bma: true
+    use_residual: true
+    top_k: 16
+    residual_oof_folds: 3
+    tier1_weighting: "stacking"
+    residual_features: "pooled"
+    residual_projection_components: null
+  training:
+    use_pca: true
+    reduction: "pls"
+    pca_components: 16
+    memory_efficient: false
+    max_samples_in_memory: null
+  save:
+    save_all_models: false
+    compress: true
+
+residual_learning:
+  kernel_type: "linear"        # linear | rbf | matern
+  nu: 2.5
+  linear: false
+  use_nystroem: false
+  nystroem_components: 512
+  exact_gp_max_samples: 2000
+  sigma_noise: 0.3
+
+selection:
+  alpha: 0.05
+  gamma_krr: null
+  gamma: 1.0
+  use_nystroem: true
+  nystroem_components: 200
+  nystroem_random_state: 0
+  linear: false
+  max_features: null
+  alpha_grid: [1.0e-3, 1.0e-2, 0.05, 0.1, 0.5, 1.0, 5.0, 20.0, 100.0]
+
+  qubo:
+    cardinality_penalty: 0.5
+    cardinality_grid: null
+    max_pool_size: 500
+    seed: 0
+
+  quantum:
+    qaoa_reps: 1
+    qaoa_maxiter: 25
+
+  quantum_kernel:
+    feature_map: zz
+    n_qubits: 6
+    n_layers: 3
+    scale: 0.1
+    apply_to_residual: true
