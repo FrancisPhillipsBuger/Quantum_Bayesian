@@ -16,9 +16,9 @@
 ## What is QBM?
 QBM is a Python-based Bayesian model-selection framework, with classical and quantum variants, that predicts the relaxed total energy of a metal-oxide catalyst surface from its initial structure. The complete workflow begins with a per-atom descriptor built from pseudospin-weighted radial (RDF), angular (ADF) and optional torsional (TDF) distribution functions. The per-atom descriptors are mapped through a Nyström approximation of an RBF kernel and sum-pooled into one vector per structure. A ridge regression on per-element atom counts then removes most of the total-energy scale, and partial least squares (PLS) projects the remaining signal onto a small number of supervised components. Kernel ridge regression models are fitted on subsets of these components and scored by a per-sample modified Bayesian Information Criterion (mBIC),
 
-$$\mathrm{mBIC} = \ln\frac{\sigma^2}{\sigma_0^2} + \frac{k\ln n}{n} + \frac{2\gamma}{n}\,k\ln\frac{p}{k},$$
+$$\mathrm{mBIC} = \ln\frac{\hat\sigma^2}{\hat\sigma_0^2} + \frac{k_\mathrm{B}\ln n}{n} + \frac{2\gamma}{n}\,k_\mathrm{S}\ln\frac{p}{k_\mathrm{S}},$$
 
-where $k$ is the subset size, $p$ the number of candidate components and $n$ the number of training samples. The top-$k$ subset models are averaged into an ensemble, and a residual learner corrects what they miss.
+where $k_\mathrm{S} = d + 1$ is the subset-complexity count of a $d$-component subset, $k_\mathrm{B}$ the BIC parameter count, $\hat\sigma_0^2$ the smallest scored variance in the candidate pool, $p$ the number of candidate components and $n$ the number of training samples. The KRR candidates score a GCV variance and set $k_\mathrm{B} = k_\mathrm{S}$; a variational re-uploading finalist scores its training-residual variance and sets $k_\mathrm{B} = N_\theta = 4qL + q + 1$, while the multiplicity term stays a function of $k_\mathrm{S}$. The top-ranked subset models are averaged into an ensemble, and a residual learner corrects what they miss.
 QBM is specifically designed to compare classical and quantum machine learning on the same materials-science regression task: the subset search and the kernels can run on a classical computer or on a simulated gate-model quantum computer.
 
 ## Why QBM?
@@ -79,7 +79,7 @@ PyTorch is only used for data loading and runs on CPU. If you need a specific CU
 │   ├── model_selection.yaml              #   baseline
 │   ├── model_selection_quantum.yaml      #   quantum
 │   ├── model_selection_quantum_kernel.yaml     # quantum_kernel
-│   └── model_selection_quantum_reupload.yaml   # reupload
+│   └── model_selection_quantum_reupload.yaml   # quantum_reupload
 ├── bayesian_framework/
 │   ├── descriptors/                      # Pseudospin RDF / ADF / TDF descriptor
 │   │   ├── feature_extractor.py          #   per-atom descriptor, dimension 2 * (rdf + adf + tdf)
@@ -158,7 +158,7 @@ python -m main_train train --variant <variant> --base_dir <dataset_split_folder>
 
 | Argument       | Description                                                                     |
 | -------------- | ------------------------------------------------------------------------------- |
-| `--variant`    | `baseline`, `quantum`, `quantum_kernel` or `reupload`                           |
+| `--variant`    | `baseline`, `quantum`, `quantum_kernel` or `quantum_reupload`                   |
 | `--config_dir` | Folder containing the variant YAML files (default: `config_file/`)              |
 | `--base_dir`   | Dataset folder with `train/`, `val_id/` and `val_ood/` (overrides the config)   |
 | `--result_dir` | Output folder (overrides the config)                                            |
@@ -185,10 +185,10 @@ python -m main_train train --variant quantum_kernel --base_dir <dataset_split_fo
 ```
 
 #### 04 Data re-uploading
-`reupload` uses the QAOA subset search with two-stage rescoring, a variational data re-uploading circuit as the ensemble model, and a data re-uploading regressor with Laplace uncertainty as the residual learner. Configured by `model_selection_quantum_reupload.yaml`.
+`quantum_reupload` uses the QAOA subset search with two-stage rescoring, a variational data re-uploading circuit as the ensemble model, and a data re-uploading regressor with Laplace uncertainty as the residual learner. Configured by `model_selection_quantum_reupload.yaml`.
 
 ```
-python -m main_train train --variant reupload --base_dir <dataset_split_folder> --result_dir <output_folder>
+python -m main_train train --variant quantum_reupload --base_dir <dataset_split_folder> --result_dir <output_folder>
 ```
 
 > [!NOTE]
@@ -236,7 +236,7 @@ The following automated shell scripts run the complete QBM pipeline, from the ra
     bash run_train.sh baseline
     ```
 
-* Any other variant (`quantum`, `quantum_kernel` or `reupload`)
+* Any other variant (`quantum`, `quantum_kernel` or `quantum_reupload`)
     ```bash
     bash run_train.sh quantum
     ```

@@ -1,4 +1,4 @@
-# Variant: reupload (QAOA search + variational data re-uploading Tier 2).
+# Variant: quantum_reupload (QAOA search + variational data re-uploading Tier 2).
 # Self-contained; no other config file is read.
 # pca_components IS the QAOA qubit count (statevector needs 2^p) — keep it small.
 

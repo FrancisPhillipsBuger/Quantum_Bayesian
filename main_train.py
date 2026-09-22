@@ -4,7 +4,7 @@
 
 Entry point for BayesianFramework training and evaluation on OC22 IS2RE.
 --variant selects baseline (mBIC + RBF KRR), quantum (QAOA search),
-quantum_kernel (fidelity ZZ kernel) or reupload (data re-uploading VQC).
+quantum_kernel (fidelity ZZ kernel) or quantum_reupload (data re-uploading VQC).
 
 Created on: Sun May 24 2026
 

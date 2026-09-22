@@ -1,6 +1,6 @@
 #!/bin/bash
 # Train one BayesianFramework variant over the dataset job list; stops at the first failure.
-# Usage: ./run_train.sh [baseline | quantum | quantum_kernel | reupload]
+# Usage: ./run_train.sh [baseline | quantum | quantum_kernel | quantum_reupload]
 # Env:   CONFIG_DIR, DATA_ROOT, RESULT_BASE, RESULT_SUFFIX
 set -e
 

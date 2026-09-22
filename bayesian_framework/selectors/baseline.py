@@ -3,7 +3,9 @@
 """
 
 Exhaustive subset KRR search scored by a per-sample modified BIC:
-mBIC = ln(sigma^2 / sigma_0^2) + (k ln n) / n + (2 gamma / n) k ln(p / k).
+mBIC = ln(sigma^2 / sigma_0^2) + (k_B ln n) / n + (2 gamma / n) k_S ln(p / k_S),
+where k_S = d + 1 counts the subset and k_B the fitted parameters (k_B = k_S
+for the KRR candidates, N_theta for a variational re-uploading finalist).
 
 Created on: Sun May 24 2026
 

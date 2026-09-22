@@ -1,7 +1,7 @@
 #!/bin/bash
 # Shared setup sourced by run_train.sh and run_train_all_variants.sh.
 
-VARIANT_NAMES=(baseline quantum quantum_kernel reupload)
+VARIANT_NAMES=(baseline quantum quantum_kernel quantum_reupload)
 RULE="========================================================================"
 N_OK=0
 N_FAIL=0
@@ -26,7 +26,7 @@ result_root() {
         baseline)       echo "${base}/result${RESULT_SUFFIX}" ;;
         quantum)        echo "${base}/result_quantum${RESULT_SUFFIX}" ;;
         quantum_kernel) echo "${base}/result_quantum_kernel${RESULT_SUFFIX}" ;;
-        reupload)       echo "${base}/result_quantum_reupload${RESULT_SUFFIX}" ;;
+        quantum_reupload)       echo "${base}/result_quantum_reupload${RESULT_SUFFIX}" ;;
         *) echo "[Error]      Unknown variant: $1 (expected: ${VARIANT_NAMES[*]})" >&2; return 1 ;;
     esac
 }

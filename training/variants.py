@@ -33,7 +33,7 @@ VARIANTS = {
         "config_stem": "model_selection_quantum_kernel",
         "checkpoint": "bayesian_framework_quantum_kernel_is2re_best",
     },
-    "reupload": {
+    "quantum_reupload": {
         "config_stem": "model_selection_quantum_reupload",
         "checkpoint": "bayesian_framework_quantum_reupload_is2re_best",
     },
@@ -131,11 +131,11 @@ def qkernel_kwargs(qk_cfg):
     )
 
 
-def reupload_kwargs(ru_cfg, proxy_cfg):
+def quantum_reupload_kwargs(ru_cfg, proxy_cfg):
 
     """
 
-    Re-uploading model kwargs (reupload variant).
+    Re-uploading model kwargs (quantum_reupload variant).
 
     :param1 ru_cfg:    the reuploading config block.
     :param2 proxy_cfg: the selection_proxy block (stage-A proxy).
@@ -196,8 +196,8 @@ def build_model(variant, configs, device):
     if variant == "quantum":
         return BayesianFrameworkQuantum(**kwargs)
 
-    if variant == "reupload":
-        kwargs.update(reupload_kwargs(
+    if variant == "quantum_reupload":
+        kwargs.update(quantum_reupload_kwargs(
             sel_cfg.get("reuploading", {}),
             sel_cfg.get("selection_proxy", {}),
         ))
